@@ -40,7 +40,7 @@ def put_city(
     if not city:
         raise HTTPException(status_code=404, detail="City not found")
 
-    for key, value in city_data:
+    for key, value in city_data.model_dump().items():
         setattr(city, key, value)
 
     db.commit()

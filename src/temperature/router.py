@@ -4,14 +4,14 @@ from datetime import datetime
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from httpx import AsyncClient
 from sqlalchemy.orm import Session
 
 from src.city.crud import get_cities
 from src.city.models import CityModel
 from src.database import get_db
-from src.temperature.crud import get_temperatures, get_temperatures_one_city
+from src.temperature.crud import get_temperatures
 from src.temperature.models import TemperatureModel
 
 load_dotenv()
@@ -28,19 +28,12 @@ async def send_request(
     )
     temperature = response.json().get("current", {}).get("temp_c")
 
-    db_temperature = db.query(
-        TemperatureModel
-    ).filter(TemperatureModel.city_id == city.id).first()
-    if db_temperature:
-        db_temperature.temperature = temperature
-        db_temperature.date_time = datetime.now()
-    else:
-        new_temperature = TemperatureModel(
-            city_id=city.id,
-            date_time=datetime.now(),
-            temperature=temperature
-        )
-        db.add(new_temperature)
+    new_temperature = TemperatureModel(
+        city_id=city.id,
+        date_time=datetime.now(),
+        temperature=temperature
+    )
+    db.add(new_temperature)
     return city
 
 
@@ -59,10 +52,8 @@ async def update_city_temperatures(db: Session = Depends(get_db)):
 
 
 @temperature_router.get("/temperatures/")
-def get_temperatures_of_cities(db: Session = Depends(get_db)):
-    return get_temperatures(db)
-
-
-@temperature_router.get("/temperatures/?city_id={city_id}")
-def get_temperatures_of_city(city_id: int, db: Session = Depends(get_db)):
-    return get_temperatures_one_city(city_id, db)
+def get_temperatures_of_cities(
+        city_id: int = Query(None),
+        db: Session = Depends(get_db)
+):
+    return get_temperatures(city_id, db)
